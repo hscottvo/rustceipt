@@ -1,4 +1,4 @@
-use crate::receipt::DollarValue;
+use crate::receipt::dollar_value::DollarValue;
 use thiserror::Error;
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Error)]

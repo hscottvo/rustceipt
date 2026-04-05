@@ -1,29 +1,7 @@
+pub(crate) mod dollar_value;
+
 use crate::error::{Error, Result};
-use std::{iter::Sum, ops::Add};
-
-use derive_more::{AsRef, Display};
-#[derive(Debug, Clone, Copy, Display, PartialEq, AsRef)]
-pub struct DollarValue(f32);
-
-impl Add for DollarValue {
-    type Output = DollarValue;
-    fn add(self, rhs: Self) -> Self::Output {
-        DollarValue(self.0 + rhs.0)
-    }
-}
-
-impl Sum for DollarValue {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(DollarValue(0.), |x, a| x + a)
-    }
-}
-
-impl TryFrom<f32> for DollarValue {
-    type Error = Error;
-    fn try_from(value: f32) -> Result<DollarValue> {
-        Ok(DollarValue(value))
-    }
-}
+use dollar_value::DollarValue;
 
 pub struct Item {
     name: String,
@@ -76,10 +54,10 @@ mod tests {
     #[test]
     fn receipt_items_add_to_correct_subtotal() -> Result<()> {
         let items = vec![
-            Item::new("foo", DollarValue(1.)),
-            Item::new("bar", DollarValue(2.)),
+            Item::new("foo", unsafe { DollarValue::new_unchecked(1.) }),
+            Item::new("bar", unsafe { DollarValue::new_unchecked(2.) }),
         ];
-        let subtotal = Some(DollarValue(3.));
+        let subtotal = Some(unsafe { DollarValue::new_unchecked(3.) });
         let receipt = Receipt::try_new(items, subtotal)?;
         assert_eq!(receipt.names(), vec!["foo".to_string(), "bar".to_string()]);
         Ok(())
