@@ -2,12 +2,15 @@ use std::{iter::Sum, ops::Add};
 
 use derive_more::{AsRef, Display};
 
-use crate::error::{Error, Result};
 #[derive(Debug, Clone, Copy, Display, PartialEq, AsRef)]
 pub struct DollarValue(f32);
 impl DollarValue {
     pub unsafe fn new_unchecked(value: f32) -> DollarValue {
         DollarValue(value)
+    }
+    #[cfg(test)]
+    fn inner(self) -> f32 {
+        self.0
     }
 }
 
@@ -24,9 +27,35 @@ impl Sum for DollarValue {
     }
 }
 
-impl TryFrom<f32> for DollarValue {
-    type Error = Error;
-    fn try_from(value: f32) -> Result<DollarValue> {
-        Ok(DollarValue(value))
+impl<T> From<T> for DollarValue
+where
+    T: Into<f32>,
+{
+    fn from(value: T) -> DollarValue {
+        let truncated_value = (value.into() * 100.0).round() / 100.0;
+        DollarValue(truncated_value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_close;
+    #[test]
+    fn test_truncate_to_cents() {
+        let value = DollarValue::from(1.2345);
+        assert_eq!(DollarValue(1.23), value);
+    }
+
+    #[test]
+    fn test_negative_float() {
+        let value = DollarValue::from(-12.432);
+        assert_close(value.inner(), -12.43);
+    }
+
+    #[test]
+    fn test_parse_int() {
+        let value = DollarValue::from(5i16);
+        assert_close(value.inner(), 5.);
     }
 }
