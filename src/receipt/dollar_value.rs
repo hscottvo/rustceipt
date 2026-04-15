@@ -58,4 +58,10 @@ mod tests {
         let value = DollarValue::from(5i16);
         assert_close(value.inner(), 5.);
     }
+
+    #[test]
+    fn test_as_ref() {
+        let value = DollarValue::from(12i16);
+        assert_close(*value.as_ref(), 12f32);
+    }
 }
