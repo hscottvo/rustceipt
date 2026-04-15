@@ -1,4 +1,7 @@
-use std::{iter::Sum, ops::Add};
+use std::{
+    iter::Sum,
+    ops::{Add, Mul},
+};
 
 use derive_more::{AsRef, Display};
 
@@ -24,6 +27,13 @@ impl Add for DollarValue {
 impl Sum for DollarValue {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(DollarValue(0.), |x, a| x + a)
+    }
+}
+
+impl Mul<f32> for DollarValue {
+    type Output = DollarValue;
+    fn mul(self, rhs: f32) -> Self::Output {
+        DollarValue(self.0 * rhs)
     }
 }
 
@@ -63,5 +73,11 @@ mod tests {
     fn test_as_ref() {
         let value = DollarValue::from(12i16);
         assert_close(*value.as_ref(), 12f32);
+    }
+
+    #[test]
+    fn test_mul() {
+        let value = DollarValue(12.5);
+        assert_close(*(value * 2.).as_ref(), 25f32);
     }
 }
