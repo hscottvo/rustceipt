@@ -55,6 +55,11 @@ impl Receipt {
         self.items.iter().map(|item| item.name.clone()).collect()
     }
     pub fn split(&self, splits: Vec<UserSplit>) -> Result<Vec<UserSplitResult>> {
+        let split_total: f32 = splits.iter().map(|split| split.ratio).sum();
+        if (split_total - 1.).abs() > 0.001 {
+            return Err(Error::Custom("lfksjfkj".into()));
+        }
+
         let amounts: Vec<UserSplitResult> = splits
             .iter()
             .map(|split| UserSplitResult {
@@ -106,6 +111,28 @@ mod tests {
         assert_close(*splits[0].amount.as_ref(), 12.);
         assert_eq!(splits[1].username, "B");
         assert_close(*splits[1].amount.as_ref(), 8.);
+        Ok(())
+    }
+
+    #[test]
+    fn receipt_split_requires_full_split() -> Result<()> {
+        let items = vec![];
+        let subtotal = DollarValue::from(0.);
+        let receipt = Receipt::try_new(items, Some(subtotal))?;
+
+        let user_splits = vec![
+            UserSplit {
+                username: "A".to_string(),
+                ratio: 0.5,
+            },
+            UserSplit {
+                username: "B".to_string(),
+                ratio: 0.4,
+            },
+        ];
+
+        assert!(receipt.split(user_splits).is_err());
+
         Ok(())
     }
 }
