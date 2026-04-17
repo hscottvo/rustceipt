@@ -1,6 +1,10 @@
 pub(crate) mod dollar_value;
+pub(crate) mod ratio;
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    receipt::ratio::Ratio,
+};
 use dollar_value::DollarValue;
 
 pub struct Item {
@@ -17,7 +21,7 @@ impl Item {
 
 pub struct UserSplit {
     username: String,
-    ratio: f32,
+    ratio: Ratio,
 }
 
 pub struct UserSplitResult {
@@ -55,16 +59,18 @@ impl Receipt {
         self.items.iter().map(|item| item.name.clone()).collect()
     }
     pub fn split(&self, splits: Vec<UserSplit>) -> Result<Vec<UserSplitResult>> {
-        let split_total: f32 = splits.iter().map(|split| split.ratio).sum();
-        if (split_total - 1.).abs() > 0.001 {
-            return Err(Error::Custom("lfksjfkj".into()));
+        let split_total: f32 = splits.iter().map(|split| *split.ratio.as_ref()).sum();
+        let total_ratio = Ratio::try_from(split_total)?;
+
+        if (*total_ratio.as_ref() - 1.).abs() > f32::EPSILON {
+            return Err(Error::SplitRatioMismatch(total_ratio));
         }
 
         let amounts: Vec<UserSplitResult> = splits
             .iter()
             .map(|split| UserSplitResult {
                 username: split.username.clone(),
-                amount: self.subtotal.unwrap() * split.ratio,
+                amount: (*split.ratio.as_ref() * *self.subtotal.unwrap().as_ref()).into(),
             })
             .collect();
         Ok(amounts)
@@ -98,11 +104,11 @@ mod tests {
         let user_splits = vec![
             UserSplit {
                 username: "A".to_string(),
-                ratio: 0.6,
+                ratio: Ratio::try_from(0.6)?,
             },
             UserSplit {
                 username: "B".to_string(),
-                ratio: 0.4,
+                ratio: Ratio::try_from(0.4)?,
             },
         ];
 
@@ -123,11 +129,11 @@ mod tests {
         let user_splits = vec![
             UserSplit {
                 username: "A".to_string(),
-                ratio: 0.5,
+                ratio: Ratio::try_from(0.5)?,
             },
             UserSplit {
                 username: "B".to_string(),
-                ratio: 0.4,
+                ratio: Ratio::try_from(0.4)?,
             },
         ];
 

@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn test_truncate_to_cents() {
         let value = DollarValue::from(1.2345);
-        assert_eq!(DollarValue(1.23), value);
+        assert_eq!(1.23, value.inner());
     }
 
     #[test]
