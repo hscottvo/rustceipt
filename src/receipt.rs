@@ -31,28 +31,21 @@ pub struct UserSplitResult {
 // TODO: Typestate, based on what's there and what's missing?
 pub struct Receipt {
     items: Vec<Item>,
-    subtotal: Option<DollarValue>,
-    total: Option<DollarValue>,
+    total: DollarValue,
 }
 
 impl Receipt {
-    pub fn try_new(items: Vec<Item>, subtotal: Option<DollarValue>) -> Result<Receipt> {
+    pub fn try_new(items: Vec<Item>, total: DollarValue) -> Result<Receipt> {
         let total_items_value: DollarValue = items.iter().map(|item| item.value).sum();
 
-        if let Some(subtotal) = subtotal
-            && total_items_value != subtotal
-        {
+        if total_items_value != total {
             return Err(Error::SubtotalMismatch {
                 got: total_items_value,
-                expected: subtotal,
+                expected: total,
             });
         }
 
-        Ok(Receipt {
-            items,
-            subtotal,
-            total: None,
-        })
+        Ok(Receipt { items, total })
     }
 
     pub fn names(&self) -> Vec<String> {
@@ -70,7 +63,7 @@ impl Receipt {
             .iter()
             .map(|split| UserSplitResult {
                 username: split.username.clone(),
-                amount: (*split.ratio.as_ref() * *self.subtotal.unwrap().as_ref()).into(),
+                amount: (*split.ratio.as_ref() * *self.total.as_ref()).into(),
             })
             .collect();
         Ok(amounts)
@@ -89,8 +82,8 @@ mod tests {
             Item::new("foo", unsafe { DollarValue::new_unchecked(1.) }),
             Item::new("bar", unsafe { DollarValue::new_unchecked(2.) }),
         ];
-        let subtotal = Some(unsafe { DollarValue::new_unchecked(3.) });
-        let receipt = Receipt::try_new(items, subtotal)?;
+        let total = unsafe { DollarValue::new_unchecked(3.) };
+        let receipt = Receipt::try_new(items, total)?;
         assert_eq!(receipt.names(), vec!["foo".to_string(), "bar".to_string()]);
         Ok(())
     }
@@ -98,8 +91,8 @@ mod tests {
     #[test]
     fn receipt_split_flow() -> Result<()> {
         let items = vec![Item::new("nothing", 20f32.into())];
-        let subtotal = Some(unsafe { DollarValue::new_unchecked(20.) });
-        let receipt = Receipt::try_new(items, subtotal)?;
+        let total = unsafe { DollarValue::new_unchecked(20.) };
+        let receipt = Receipt::try_new(items, total)?;
 
         let user_splits = vec![
             UserSplit {
@@ -123,8 +116,8 @@ mod tests {
     #[test]
     fn receipt_split_requires_full_split() -> Result<()> {
         let items = vec![];
-        let subtotal = DollarValue::from(0.);
-        let receipt = Receipt::try_new(items, Some(subtotal))?;
+        let total = DollarValue::from(0.);
+        let receipt = Receipt::try_new(items, total)?;
 
         let user_splits = vec![
             UserSplit {
