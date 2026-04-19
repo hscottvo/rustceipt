@@ -72,7 +72,7 @@ impl Receipt {
 
 #[cfg(test)]
 mod tests {
-    use crate::assert_close;
+    use crate::close;
 
     use super::*;
 
@@ -107,9 +107,9 @@ mod tests {
 
         let splits = receipt.split(user_splits)?;
         assert_eq!(splits[0].username, "A");
-        assert_close(*splits[0].amount.as_ref(), 12.);
+        assert!(close(splits[0].value(), 12.));
         assert_eq!(splits[1].username, "B");
-        assert_close(*splits[1].amount.as_ref(), 8.);
+        assert!(close(splits[1].value(), 8.));
         Ok(())
     }
 

@@ -11,8 +11,7 @@ impl DollarValue {
     pub unsafe fn new_unchecked(value: f32) -> DollarValue {
         DollarValue(value)
     }
-    #[cfg(test)]
-    fn inner(self) -> f32 {
+    pub fn inner(self) -> f32 {
         self.0
     }
 }
@@ -50,7 +49,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_close;
+    use crate::close;
     #[test]
     fn test_truncate_to_cents() {
         let value = DollarValue::from(1.2345);
@@ -60,24 +59,24 @@ mod tests {
     #[test]
     fn test_negative_float() {
         let value = DollarValue::from(-12.432);
-        assert_close(value.inner(), -12.43);
+        assert!(close(value.inner(), -12.43));
     }
 
     #[test]
     fn test_parse_int() {
         let value = DollarValue::from(5i16);
-        assert_close(value.inner(), 5.);
+        assert!(close(value.inner(), 5.));
     }
 
     #[test]
     fn test_as_ref() {
         let value = DollarValue::from(12i16);
-        assert_close(*value.as_ref(), 12f32);
+        assert!(close(*value.as_ref(), 12f32));
     }
 
     #[test]
     fn test_mul() {
         let value = DollarValue(12.5);
-        assert_close(*(value * 2.).as_ref(), 25f32);
+        assert!(close(*(value * 2.).as_ref(), 25f32));
     }
 }

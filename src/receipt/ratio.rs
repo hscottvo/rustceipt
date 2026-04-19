@@ -18,8 +18,7 @@ impl Ratio {
         }
     }
 
-    #[cfg(test)]
-    fn inner(self) -> f32 {
+    pub fn inner(self) -> f32 {
         self.0
     }
 }
@@ -40,7 +39,7 @@ impl TryFrom<f32> for Ratio {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_close;
+    use crate::close;
 
     #[test]
     fn test_valid_ratio() {
@@ -75,12 +74,12 @@ mod tests {
     #[test]
     fn test_as_ref() {
         let value = Ratio::new(0.53).unwrap();
-        assert_close(0.53, value.into());
+        assert!(close(0.53, value.into()));
     }
 
     #[test]
     fn test_into_f32() {
         let value = Ratio::new(0.5).unwrap();
-        assert_close(0.5, value.into());
+        assert!(close(0.5, value.into()));
     }
 }

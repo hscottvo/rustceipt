@@ -1,8 +1,7 @@
 pub mod error;
 pub mod receipt;
 
-#[cfg(test)]
-pub(crate) fn assert_close(lhs: f32, rhs: f32) {
+pub(crate) fn close(lhs: f32, rhs: f32) -> bool {
     let delta = (lhs - rhs).abs();
-    assert!(delta < f32::EPSILON);
+    delta < f32::EPSILON
 }
