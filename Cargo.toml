@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 derive_more = { version = "2.1.1", features = ["as_ref", "display"] }
+rust_decimal = { version = "1.41.0", default-features = false, features = ["macros", "std"] }
 thiserror = "2.0.18"
