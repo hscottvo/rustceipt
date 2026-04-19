@@ -28,6 +28,11 @@ pub struct UserSplitResult {
     username: String,
     amount: DollarValue,
 }
+impl UserSplitResult {
+    fn value(&self) -> f32 {
+        self.amount.inner()
+    }
+}
 // TODO: Typestate, based on what's there and what's missing?
 pub struct Receipt {
     items: Vec<Item>,
@@ -52,10 +57,10 @@ impl Receipt {
         self.items.iter().map(|item| item.name.clone()).collect()
     }
     pub fn split(&self, splits: Vec<UserSplit>) -> Result<Vec<UserSplitResult>> {
-        let split_total: f32 = splits.iter().map(|split| *split.ratio.as_ref()).sum();
+        let split_total: f32 = splits.iter().map(|split| split.ratio.as_ref()).sum();
         let total_ratio = Ratio::try_from(split_total)?;
 
-        if (*total_ratio.as_ref() - 1.).abs() > f32::EPSILON {
+        if (total_ratio.as_ref() - 1.).abs() > f32::EPSILON {
             return Err(Error::SplitRatioMismatch(total_ratio));
         }
 
@@ -63,7 +68,7 @@ impl Receipt {
             .iter()
             .map(|split| UserSplitResult {
                 username: split.username.clone(),
-                amount: (*split.ratio.as_ref() * *self.total.as_ref()).into(),
+                amount: (split.ratio.as_ref() * self.total.as_ref()).into(),
             })
             .collect();
         Ok(amounts)
