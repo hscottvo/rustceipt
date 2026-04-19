@@ -62,21 +62,25 @@ impl Receipt {
     }
     pub fn split(&self, splits: Vec<UserSplit>) -> Result<Vec<UserSplitResult>> {
         let ratios: Vec<Ratio> = splits.iter().map(|split| split.ratio).collect();
-        let total_ratio =
-            Ratio::sum(ratios.clone()).map_err(|_| Error::RatioSumNotOne(ratios.clone()))?;
+        Self::validate_full_ratio(ratios)?;
 
-        if total_ratio != Ratio::try_new(dec!(1))? {
-            return Err(Error::RatioSumNotOne(ratios));
-        }
-
-        let amounts: Vec<UserSplitResult> = splits
+        let results: Vec<UserSplitResult> = splits
             .iter()
             .map(|split| UserSplitResult {
                 username: split.username.clone(),
                 amount: (split.ratio.inner() * self.total.inner()).into(),
             })
             .collect();
-        Ok(amounts)
+        Ok(results)
+    }
+
+    fn validate_full_ratio(ratios: Vec<Ratio>) -> Result<()> {
+        let total_ratio =
+            Ratio::sum(ratios.clone()).map_err(|_| Error::RatioSumNotOne(ratios.clone()))?;
+        if total_ratio != Ratio::try_new(dec!(1))? {
+            return Err(Error::RatioSumNotOne(ratios));
+        }
+        Ok(())
     }
 }
 
@@ -167,6 +171,39 @@ mod tests {
             receipt.split(user_splits),
             Err(Error::RatioSumNotOne(_))
         ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn split_has_extra_cents() -> Result<()> {
+        let items = vec![Item::new("test", 1.into())];
+        let total = DollarValue::from(1);
+        let receipt = Receipt::try_new(items, total)?;
+
+        let user_splits = vec![
+            UserSplit {
+                username: "A".to_string(),
+                ratio: Ratio::try_from(1. / 3.)?,
+            },
+            UserSplit {
+                username: "B".to_string(),
+                ratio: Ratio::try_from(1. / 3.)?,
+            },
+            UserSplit {
+                username: "C".to_string(),
+                ratio: Ratio::try_from(1. / 3.)?,
+            },
+        ];
+
+        assert_eq!(
+            receipt
+                .split(user_splits)?
+                .iter()
+                .map(|result| result.amount.inner())
+                .collect::<Vec<Decimal>>(),
+            [dec!(0.34), dec!(0.33), dec!(0.33)]
+        );
 
         Ok(())
     }
