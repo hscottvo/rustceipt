@@ -18,6 +18,7 @@
           packages = with pkgs; [
             bacon
             cargo
+            cargo-nextest
             clippy
             lefthook
             rustc
