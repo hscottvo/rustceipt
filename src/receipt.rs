@@ -19,15 +19,18 @@ impl Item {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct UserSplit {
     username: String,
     ratio: Ratio,
 }
 
+#[derive(Debug, Clone)]
 pub struct UserSplitResult {
     username: String,
     amount: DollarValue,
 }
+
 impl UserSplitResult {
     fn value(&self) -> f32 {
         self.amount.inner()
@@ -57,11 +60,17 @@ impl Receipt {
         self.items.iter().map(|item| item.name.clone()).collect()
     }
     pub fn split(&self, splits: Vec<UserSplit>) -> Result<Vec<UserSplitResult>> {
-        let split_total: f32 = splits.iter().map(|split| split.ratio.as_ref()).sum();
-        let total_ratio = Ratio::try_from(split_total)?;
+        let ratios: Vec<Ratio> = splits.iter().map(|split| split.ratio).collect();
+        let total_ratio = Ratio::sum(ratios.clone()).map_err(|source| Error::SumMismatch {
+            ratios: ratios.clone(),
+            source,
+        })?;
 
-        if (total_ratio.as_ref() - 1.).abs() > f32::EPSILON {
-            return Err(Error::SplitRatioMismatch(total_ratio));
+        if (total_ratio.as_ref() - 1.) < 0. {
+            return Err(Error::SumMismatch {
+                ratios,
+                source: ratio::Error::TooSmall(total_ratio.inner()),
+            });
         }
 
         let amounts: Vec<UserSplitResult> = splits
@@ -119,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn receipt_split_requires_full_split() -> Result<()> {
+    fn split_sum_too_small() -> Result<()> {
         let items = vec![];
         let total = DollarValue::from(0.);
         let receipt = Receipt::try_new(items, total)?;
@@ -134,8 +143,58 @@ mod tests {
                 ratio: Ratio::try_from(0.4)?,
             },
         ];
+        match receipt.split(user_splits.clone()) {
+            Ok(split) => println!("{:?}", split),
+            Err(e) => println!("{:?}", e),
+        }
+        // if let Err(e) =
+        //     println!("{:?}", e);
+        // } else {
+        //     println!("you fucked");
+        //     println!()
+        // }
+        // println!("{:#}", receipt.split(user_splits));
 
-        assert!(receipt.split(user_splits).is_err());
+        assert!(matches!(
+            receipt.split(user_splits),
+            Err(Error::SumMismatch {
+                ratios: _,
+                source: ratio::Error::TooSmall(0.9)
+            })
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn split_sum_too_large() -> Result<()> {
+        let items = vec![];
+        let total = DollarValue::from(0.);
+        let receipt = Receipt::try_new(items, total)?;
+
+        let user_splits = vec![
+            UserSplit {
+                username: "A".to_string(),
+                ratio: Ratio::try_from(0.5)?,
+            },
+            UserSplit {
+                username: "B".to_string(),
+                ratio: Ratio::try_from(0.6)?,
+            },
+        ];
+
+        if let Err(e) = receipt.split(user_splits.clone()) {
+            println!("{:?}", e);
+        }
+        // println!("{:#}", receipt.split(user_splits));
+
+        assert!(matches!(
+            receipt.split(user_splits),
+            Err(Error::SumMismatch {
+                ratios: _,
+                source: ratio::Error::TooLarge(1.1)
+            })
+        ));
 
         Ok(())
     }
