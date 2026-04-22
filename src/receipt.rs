@@ -6,7 +6,7 @@ use crate::{
     receipt::ratio::Ratio,
 };
 use dollar_value::DollarValue;
-use rust_decimal::{Decimal, dec};
+use rust_decimal::{Decimal, RoundingStrategy, dec, prelude::ToPrimitive};
 
 pub struct Item {
     name: String,
@@ -71,15 +71,49 @@ impl Receipt {
                 amount: (split.ratio.inner() * self.total.inner()).into(),
             })
             .collect();
+
+        let extra_value = self.get_extra_value(&results).inner();
+
+        let results = Self::distribute_extra_value(results, extra_value);
+
         Ok(results)
+    }
+
+    fn distribute_extra_value(
+        mut results: Vec<UserSplitResult>,
+        mut extra_value: Decimal,
+    ) -> Vec<UserSplitResult> {
+        let each_add = (extra_value / Decimal::from(results.len()))
+            .round_dp_with_strategy(2, RoundingStrategy::ToZero);
+        let cent = Decimal::try_from(0.01).expect("Failed to parse 0.01 into Decimal somehow");
+        extra_value -= each_add;
+
+        let dist_num = (extra_value / cent).trunc().to_usize().unwrap_or(0);
+
+        for i in 0..usize::min(results.len(), dist_num) {
+            results[i].amount = results[i].amount + DollarValue::new(cent);
+        }
+
+        results
+    }
+
+    fn get_extra_value(&self, results: &[UserSplitResult]) -> DollarValue {
+        let total_split_value = results.iter().map(|result| result.amount).sum();
+        println!("total_...{total_split_value}");
+        self.total - total_split_value
     }
 
     fn validate_full_ratio(ratios: Vec<Ratio>) -> Result<()> {
         let total_ratio =
             Ratio::sum(ratios.clone()).map_err(|_| Error::RatioSumNotOne(ratios.clone()))?;
-        if total_ratio != Ratio::try_new(dec!(1))? {
+
+        let one = Ratio::try_new(dec!(1))?;
+        let epsilon = dec!(0.000001);
+
+        if (total_ratio.inner() - one.inner()).abs() > epsilon {
             return Err(Error::RatioSumNotOne(ratios));
         }
+
         Ok(())
     }
 }
@@ -200,10 +234,50 @@ mod tests {
             receipt
                 .split(user_splits)?
                 .iter()
-                .map(|result| result.amount.inner())
+                .map(|result| result.value())
                 .collect::<Vec<Decimal>>(),
             [dec!(0.34), dec!(0.33), dec!(0.33)]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_extra_cents() -> Result<()> {
+        let receipt = Receipt {
+            items: vec![],
+            total: DollarValue::from(1),
+        };
+
+        let split_results = [
+            UserSplitResult {
+                username: "A".to_string(),
+                amount: DollarValue::try_from(0.33)?,
+            },
+            UserSplitResult {
+                username: "B".to_string(),
+                amount: DollarValue::try_from(0.33)?,
+            },
+            UserSplitResult {
+                username: "C".to_string(),
+                amount: DollarValue::try_from(0.33)?,
+            },
+        ];
+        let extra_value = receipt.get_extra_value(&split_results);
+        assert_eq!(extra_value, DollarValue::try_from(0.01)?);
+
+        let split_results = [
+            UserSplitResult {
+                username: "A".to_string(),
+                amount: DollarValue::try_from(0.5)?,
+            },
+            UserSplitResult {
+                username: "B".to_string(),
+                amount: DollarValue::try_from(0.5)?,
+            },
+        ];
+        let extra_value = receipt.get_extra_value(&split_results);
+        assert_eq!(extra_value, DollarValue::from(0));
 
         Ok(())
     }
