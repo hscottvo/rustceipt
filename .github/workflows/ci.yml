@@ -1,0 +1,14 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+      - name: Echo
+        run: |
+          echo "Hello world"
