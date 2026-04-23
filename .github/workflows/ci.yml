@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -18,6 +19,11 @@ jobs:
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.14.0"
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
 
       - name: Restore cargo & target cache
         uses: actions/cache@v4
@@ -29,12 +35,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-ci
           restore-keys: |
             ${{ runner.os }}-cargo-
-
-      - name: Restore sccache cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/sccache
-          key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build (release)
         env:
