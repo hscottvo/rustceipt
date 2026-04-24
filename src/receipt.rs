@@ -148,6 +148,18 @@ mod tests {
     }
 
     #[test]
+    fn receipt_items_as_array() -> Result<()> {
+        let items = [
+            Item::new("foo", DollarValue::from(1)),
+            Item::new("bar", DollarValue::new(dec!(2))),
+        ];
+        let total = DollarValue::from(3);
+        let receipt = Receipt::try_new(items, total)?;
+        assert_eq!(receipt.names(), vec!["foo".to_string(), "bar".to_string()]);
+        Ok(())
+    }
+
+    #[test]
     fn receipt_split_flow() -> Result<()> {
         let items = vec![Item::new("nothing", 20f32.try_into()?)];
         let total = DollarValue::from(20);
@@ -203,7 +215,7 @@ mod tests {
         let total = DollarValue::try_from(0.)?;
         let receipt = Receipt::try_new(items, total)?;
 
-        let user_splits = vec![
+        let user_splits = [
             UserSplit {
                 username: "A".to_string(),
                 ratio: Ratio::try_from(0.5)?,
@@ -292,6 +304,27 @@ mod tests {
         let extra_value = receipt.get_extra_value(&split_results);
         assert_eq!(extra_value, DollarValue::from(0));
 
+        Ok(())
+    }
+
+    #[test]
+    fn validate_full_ratio() -> Result<()> {
+        let ratios = unsafe {
+            [
+                Ratio::new_unchecked(dec!(0.1)),
+                Ratio::new_unchecked(dec!(0.2)),
+            ]
+        };
+        let result = Receipt::validate_full_ratio(ratios);
+        assert!(matches!(result, Err(Error::RatioSumNotOne(_))));
+
+        let ratios = unsafe {
+            [
+                Ratio::new_unchecked(dec!(0.8)),
+                Ratio::new_unchecked(dec!(0.2)),
+            ]
+        };
+        Receipt::validate_full_ratio(ratios)?;
         Ok(())
     }
 }
