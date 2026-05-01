@@ -321,7 +321,7 @@ mod tests {
         let ratios = unsafe {
             [
                 Ratio::new_unchecked(dec!(0.8)),
-                Ratio::new_unchecked(dec!(0.2)),
+                Ratio::new_unchecked(dec!(0.3)),
             ]
         };
         Receipt::validate_full_ratio(ratios)?;
